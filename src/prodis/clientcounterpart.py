@@ -9,9 +9,10 @@ from .forevertask import ForeverTask as _ForeverTask
 from .packetreader import PacketReader as _PacketReader
 from .packetwriter import PacketWriter as _PacketWriter
 from .packets import (
-    handshaking as _handshaking,
     protocol as _protocol,
+    handshaking as _handshaking,
     status as _status,
+    login as _login,
 )
 from .packets.handshaking.serverbound import Handshake as _Handshake
 from .packets.status.serverbound import (
@@ -21,6 +22,9 @@ from .packets.status.serverbound import (
 from .packets.status.clientbound import (
     Response as _Response,
     Pong as _Pong,
+)
+from .packets.login.serverbound import (
+    LoginStart as _LoginStart,
 )
 
 
@@ -36,11 +40,28 @@ class ClientListener(_ForeverTask):
 
         protocol, next_state = await self._handshaking(reader)
 
-        if next_state != 1:
-            raise NotImplementedError("login not implemented")
+        if next_state == 1:
+
+            token = _protocol.set(protocol)
+            await self._status(reader, writer)
+            _protocol.reset(token)
+
+            await self._expect_eof(reader, writer)
+
+            if writer.can_write_eof():
+                writer.write_eof()
+
+            writer.close()
+            await writer.wait_closed()
+            return
+
+        if next_state != 2:
+
+            writer.close()
+            raise NotImplementedError(f"unknown handshake state {next_state}")
 
         token = _protocol.set(protocol)
-        await self._status(reader, writer)
+        await self._login(reader, writer)
         _protocol.reset(token)
 
         await self._expect_eof(reader, writer)
@@ -50,6 +71,7 @@ class ClientListener(_ForeverTask):
 
         writer.close()
         await writer.wait_closed()
+        return
 
     async def _expect_eof(self, reader: _asyncio.StreamReader, writer: _asyncio.StreamWriter) -> None:
 
@@ -91,7 +113,7 @@ class ClientListener(_ForeverTask):
         else:
             raise EOFError("client disconnected")
 
-        packet = _Response()
+        packet = _Response(description="Foobar")
         await packet_writer.write(packet)
 
         async for packet in packet_reader:
@@ -104,6 +126,22 @@ class ClientListener(_ForeverTask):
 
         packet = _Pong(value=value)
         await packet_writer.write(packet)
+
+    async def _login(
+            self,
+            reader: _asyncio.StreamReader,
+            writer: _asyncio.StreamWriter,
+    ) -> None:
+
+        packet_reader = _PacketReader(reader, _login.ServerBound)
+        packet_writer = _PacketWriter(writer)
+
+        async for packet in packet_reader:
+            assert isinstance(packet, _LoginStart)
+
+            break
+        else:
+            raise EOFError("client disconnected")
 
     async def _coroutine(self) -> None:
 
