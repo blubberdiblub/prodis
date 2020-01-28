@@ -26,6 +26,9 @@ from .packets.status.clientbound import (
 from .packets.login.serverbound import (
     LoginStart as _LoginStart,
 )
+from .packets.login.clientbound import (
+    LoginSuccess as _LoginSuccess,
+)
 
 
 class ClientListener(_ForeverTask):
@@ -139,9 +142,16 @@ class ClientListener(_ForeverTask):
         async for packet in packet_reader:
             assert isinstance(packet, _LoginStart)
 
+            username = packet.name
             break
         else:
             raise EOFError("client disconnected")
+
+        assert username.isalnum()
+        uuid = '4465fcc3-d445-4ee2-bb00-7b39ce2d3cc7'
+
+        packet = _LoginSuccess(uuid=uuid, username=username)
+        await packet_writer.write(packet)
 
     async def _coroutine(self) -> None:
 

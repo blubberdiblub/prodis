@@ -8,7 +8,7 @@ from typing import (
     Union as _Union,
 )
 
-import json as _json
+from uuid import UUID as _UUID
 
 from ..packet import NewMinecraftPacket as _NewMinecraftPacket
 from ..metaclasses import (
@@ -38,4 +38,44 @@ class _VerifiedPacket(Packet, metaclass=_IDVerifier):
     pass
 
 
-Packet.packet_types = {}
+class LoginSuccess(_VerifiedPacket):
+
+    ID = 0x2
+
+    def __init__(
+            self,
+            uuid: _Union[_UUID, str] = None,
+            username: str = None,
+    ) -> None:
+
+        if uuid is not None and not isinstance(uuid, _UUID):
+            uuid = _UUID(uuid)
+
+        super().__init__()
+
+        self.uuid = uuid
+        self.username = username
+
+    def _fmt_args(self) -> str:
+
+        return ', '.join([
+            f'uuid={self.uuid!r}',
+            f'username={self.username!r}',
+        ])
+
+    def consume_payload(self, it: _Union[_ByteString, _Iterator[int]]) -> None:
+
+        it = iter(it)
+        self.uuid = _UUID(_iterutils.consume_string(it))
+        self.username = _iterutils.consume_string(it)
+        () = it
+
+    def render_payload(self) -> _ByteString:
+
+        return (_byteutils.render_string(str(self.uuid)) +
+                _byteutils.render_string(self.username))
+
+
+Packet.packet_types = {
+    LoginSuccess.ID: LoginSuccess,
+}
