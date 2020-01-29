@@ -13,6 +13,7 @@ from .packets import (
     handshaking as _handshaking,
     status as _status,
     login as _login,
+    play as _play,
 )
 from .packets.handshaking.serverbound import Handshake as _Handshake
 from .packets.status.serverbound import (
@@ -28,6 +29,9 @@ from .packets.login.serverbound import (
 )
 from .packets.login.clientbound import (
     LoginSuccess as _LoginSuccess,
+)
+from .packets.play.clientbound import (
+    JoinGame as _JoinGame,
 )
 
 
@@ -65,6 +69,10 @@ class ClientListener(_ForeverTask):
 
         token = _protocol.set(protocol)
         await self._login(reader, writer)
+        _protocol.reset(token)
+
+        token = _protocol.set(protocol)
+        await self._play(reader, writer)
         _protocol.reset(token)
 
         await self._expect_eof(reader, writer)
@@ -152,6 +160,25 @@ class ClientListener(_ForeverTask):
 
         packet = _LoginSuccess(uuid=uuid, username=username)
         await packet_writer.write(packet)
+
+    async def _play(
+            self,
+            reader: _asyncio.StreamReader,
+            writer: _asyncio.StreamWriter,
+    ) -> None:
+
+        packet_reader = _PacketReader(reader, _play.ServerBound)
+        packet_writer = _PacketWriter(writer)
+
+        packet = _JoinGame(entity_id=1, game_mode=0, dimension=0,
+                           hashed_seed=0x0123456789abcdef)
+        await packet_writer.write(packet)
+
+        async for packet in packet_reader:
+
+            break
+        else:
+            raise EOFError("client disconnected")
 
     async def _coroutine(self) -> None:
 
