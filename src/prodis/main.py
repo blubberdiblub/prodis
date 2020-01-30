@@ -5,7 +5,7 @@ import asyncio as _asyncio
 from .clientcounterpart import ClientListener as _ClientListener
 
 
-async def main_coroutine(*tasks) -> _asyncio.Future:
+async def main_coroutine(*tasks) -> None:
 
     futures = [task.schedule() for task in tasks]
     done, pending = await _asyncio.wait(futures,
