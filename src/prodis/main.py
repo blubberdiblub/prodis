@@ -8,7 +8,14 @@ from .clientcounterpart import ClientListener as _ClientListener
 async def main_coroutine(*tasks) -> _asyncio.Future:
 
     futures = [task.schedule() for task in tasks]
-    return await _asyncio.gather(*futures)
+    done, pending = await _asyncio.wait(futures,
+                                        return_when=_asyncio.FIRST_EXCEPTION)
+
+    for future in pending:
+        future.cancel()
+
+    for future in done:
+        future.result()
 
 
 def main() -> None:
