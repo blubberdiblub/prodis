@@ -29,5 +29,8 @@ def main() -> None:
 
 
 if __name__ == '__main__':
+    from . import logger as _logger
+    _logger.basic_config()
+
     import sys as _sys
     _sys.exit(main())
