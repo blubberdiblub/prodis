@@ -35,6 +35,7 @@ class ClientListener(_ForeverTask):
 
                 if exc is not None:
                     self.future.cancel()
+                    raise exc
 
             client_handler.get_task().add_done_callback(stop_listener)
 
