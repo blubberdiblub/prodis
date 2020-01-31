@@ -2,6 +2,8 @@
 
 from typing import (
     Any as _Any,
+    Coroutine as _Coroutine,
+    Callable as _Callable,
     Optional as _Optional,
     Tuple as _Tuple,
 )
@@ -49,16 +51,14 @@ class ClientHandler:
             task_name: str = None,
     ) -> None:
 
-        print("client connected", file=_sys.stderr, flush=True)
-
         if loop is None:
             loop = _asyncio.get_running_loop()
 
         self._reader = reader
         self._writer = writer
-        self._task = None
         self._exception = None
         self._result = None
+        self._task = loop.create_task(self._handle(), name=task_name)
 
         def extract_result_and_clear_task(task) -> None:
 
@@ -79,12 +79,15 @@ class ClientHandler:
 
                 self._task = None
 
-        self._task = loop.create_task(self._handle(), name=task_name)
         self._task.add_done_callback(extract_result_and_clear_task)
 
     def get_task(self) -> _Optional[_asyncio.Task]:
 
         return self._task
+
+    def done(self) -> bool:
+
+        return self._task is None
 
     def exception(self) -> _Optional[BaseException]:
 
@@ -112,44 +115,25 @@ class ClientHandler:
 
     async def _handle(self) -> None:
 
-        protocol, next_state = await self._handshaking()
+        token = None
 
-        if next_state == 1:
+        try:
+
+            protocol, next_state = await self._handshaking()
 
             token = _protocol.set(protocol)
-            await self._status()
-            _protocol.reset(token)
+            await self._state_machine(next_state)
 
-            await self._expect_eof()
+        finally:
+
+            if token is not None:
+                _protocol.reset(token)
 
             if self._writer.can_write_eof():
                 self._writer.write_eof()
 
             self._writer.close()
             await self._writer.wait_closed()
-            return
-
-        if next_state != 2:
-
-            self._writer.close()
-            raise NotImplementedError(f"unknown handshake state {next_state}")
-
-        token = _protocol.set(protocol)
-        await self._login()
-        _protocol.reset(token)
-
-        token = _protocol.set(protocol)
-        await self._play()
-        _protocol.reset(token)
-
-        await self._expect_eof()
-
-        if self._writer.can_write_eof():
-            self._writer.write_eof()
-
-        self._writer.close()
-        await self._writer.wait_closed()
-        return
 
     async def _expect_eof(self) -> None:
 
@@ -160,19 +144,35 @@ class ClientHandler:
 
         assert self._reader.at_eof()
 
-    async def _handshaking(self) -> _Tuple[int, int]:
+    async def _handshaking(self) -> _Tuple[int, _Coroutine]:
 
         packet_reader = _PacketReader(self._reader, _handshaking.ServerBound)
         async for packet in packet_reader:
+
             assert isinstance(packet, _Handshake)
 
             assert packet.protocol == 578
-            assert packet.next_state in [1, 2]
-            return packet.protocol, packet.next_state
+            protocol = packet.protocol
+            next_state = {
+                1: self._status,
+                2: self._login,
+            }[packet.next_state]
+            break
+
         else:
+
             raise EOFError("client disconnected")
 
-    async def _status(self) -> None:
+        return protocol, next_state()
+
+    async def _state_machine(self, next_state: _Coroutine) -> None:
+
+        while next_state is not None:
+            next_state = await next_state
+
+        await self._expect_eof()
+
+    async def _status(self) -> _Optional[_Coroutine]:
 
         packet_reader = _PacketReader(self._reader, _status.ServerBound)
         packet_writer = _PacketWriter(self._writer)
@@ -197,8 +197,11 @@ class ClientHandler:
 
         packet = _Pong(value=value)
         await packet_writer.write(packet)
+        await self._expect_eof()
 
-    async def _login(self) -> None:
+        return None
+
+    async def _login(self) -> _Optional[_Coroutine]:
 
         packet_reader = _PacketReader(self._reader, _login.ServerBound)
         packet_writer = _PacketWriter(self._writer)
@@ -217,7 +220,9 @@ class ClientHandler:
         packet = _LoginSuccess(uuid=uuid, username=username)
         await packet_writer.write(packet)
 
-    async def _play(self) -> None:
+        return self._play()
+
+    async def _play(self) -> _Optional[_Coroutine]:
 
         packet_reader = _PacketReader(self._reader, _play.ServerBound)
         packet_writer = _PacketWriter(self._writer)
@@ -231,3 +236,5 @@ class ClientHandler:
             break
         else:
             raise EOFError("client disconnected")
+
+        return None
