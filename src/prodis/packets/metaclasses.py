@@ -22,7 +22,7 @@ class IDDispatcher(type):
         try:
             dispatched = cls.packet_types[packet_id]
         except KeyError:
-            raise ValueError("unknown packet ID")
+            raise ValueError("unknown packet ID") from None
 
         packet = object.__new__(dispatched)
         # cls.__init__(packet, data)
