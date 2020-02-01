@@ -6,6 +6,9 @@ import asyncio as _asyncio
 
 from .packets import Packet as _Packet
 
+from .logger import Logger as _Logger
+_log = _Logger(__name__)
+
 
 class PacketReader:
 
@@ -38,7 +41,7 @@ class PacketReader:
             raise
 
         packet = self._packet_type(data)
-        print('<-', packet, flush=True)
+        _log.debug("<- %(packet)s", packet=packet)
         return packet
 
     async def _packet_length(self) -> int:
