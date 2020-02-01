@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
 import asyncio as _asyncio
-import sys as _sys
 
 from .forevertask import ForeverTask as _ForeverTask
 from .clienthandler import ClientHandler as _ClientHandler
+
+from .logger import Logger as _Logger
+_log = _Logger(__name__)
 
 
 class ClientListener(_ForeverTask):
@@ -15,7 +17,7 @@ class ClientListener(_ForeverTask):
             writer: _asyncio.StreamWriter,
     ) -> None:
 
-        print("client connected", file=_sys.stderr, flush=True)
+        _log.notice("client connected")
 
         client_handler = _ClientHandler(reader, writer)
 
@@ -30,10 +32,15 @@ class ClientListener(_ForeverTask):
 
                 except _asyncio.CancelledError as exc:
 
+                    _log.debug("ClientHandler was cancelled")
                     _dummy = 12345
                     pass
 
                 if exc is not None:
+                    _log.exception(
+                        "exception occurred in ClientHandler: %(type) %(text)",
+                        type=exc.__class__.__name__, text=str(exc),
+                    )
                     self.future.cancel()
                     raise exc
 
