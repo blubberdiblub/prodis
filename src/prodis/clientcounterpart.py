@@ -48,13 +48,10 @@ class ClientListener(_ForeverTask):
 
     async def _coroutine(self) -> None:
 
-        loop = _asyncio.get_running_loop()
-
         server = await _asyncio.start_server(
             self._client_connected,
             host='localhost',
             port=25565,
-            loop=loop,
         )
 
         if not server.sockets:
