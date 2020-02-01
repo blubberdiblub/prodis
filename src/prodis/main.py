@@ -29,8 +29,10 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    from . import logger as _logger
-    _logger.basic_config()
-
     import sys as _sys
+
+    from . import logger as _logger
+    _logger.basic_config(level=_logger.DEBUG if __debug__ or _sys.flags.dev_mode
+                         else _logger.NOTICE)
+
     _sys.exit(main())
