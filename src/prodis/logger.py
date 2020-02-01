@@ -78,90 +78,84 @@ class Logger:
         self._logger = _logging.getLogger(module_name)
 
     def debug(
-            self, msg: str, *args,
+            self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
             **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[DEBUG], msg, *args, exc_info=exc_info,
+        self._log(_LEVEL_MAPPING[DEBUG], msg, exc_info=exc_info,
                   stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
     def info(
-            self, msg: str, *args,
+            self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
             **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[INFO], msg, *args, exc_info=exc_info,
+        self._log(_LEVEL_MAPPING[INFO], msg, exc_info=exc_info,
                   stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
     def notice(
-            self, msg: str, *args,
+            self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
             **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[NOTICE], msg, *args, exc_info=exc_info,
+        self._log(_LEVEL_MAPPING[NOTICE], msg, exc_info=exc_info,
                   stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
     def warning(
-            self, msg: str, *args,
+            self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
             **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[WARNING], msg, *args, exc_info=exc_info,
+        self._log(_LEVEL_MAPPING[WARNING], msg, exc_info=exc_info,
                   stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
     def error(
-            self, msg: str, *args,
+            self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
             **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[ERROR], msg, *args, exc_info=exc_info,
+        self._log(_LEVEL_MAPPING[ERROR], msg, exc_info=exc_info,
                   stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
     def critical(
-            self, msg: str, *args,
+            self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
             **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[CRITICAL], msg, *args, exc_info=exc_info,
+        self._log(_LEVEL_MAPPING[CRITICAL], msg, exc_info=exc_info,
                   stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
     def log(
-            self, level: int, msg: str, *args,
+            self, level: int, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
             **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[level], msg, *args, exc_info=exc_info,
+        self._log(_LEVEL_MAPPING[level], msg, exc_info=exc_info,
                   stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
     def exception(
-            self, msg: str, *args,
+            self, msg: str,
             stack_info: bool = True, stacklevel: int = 1,
             **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[ERROR], msg, *args, exc_info=True,
+        self._log(_LEVEL_MAPPING[ERROR], msg, exc_info=True,
                   stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def _log(
-            self, mapped: int, msg: str, *args,
-            exc_info=None, stack_info: bool = False, stacklevel: int,
-            **kwargs,
-    ) -> None:
+    def _log(self, mapped: int, msg: str, exc_info, stack_info: bool,
+             stacklevel: int, **kwargs) -> None:
 
         if self._logger.isEnabledFor(mapped):
 
-            if kwargs:
-                args = dict(enumerate(args), **kwargs),
-
             self._logger.log(
-                mapped, msg, *args, extra=kwargs,
+                mapped, msg, kwargs, extra=kwargs,
                 exc_info=exc_info, stack_info=stack_info,
                 stacklevel=max(stacklevel, 1) + 2,
             )
