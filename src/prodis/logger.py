@@ -9,7 +9,7 @@ import logging as _logging
     NOTICE,
     WARNING,
     ERROR,
-    FATAL,
+    CRITICAL,
 ] = range(6)
 
 
@@ -45,7 +45,7 @@ _LEVEL_MAPPING = {
     NOTICE: _get_or_add_level('NOTICE', (_logging.INFO + _logging.WARN) // 2),
     WARNING: _logging.WARNING,
     ERROR: _logging.ERROR,
-    FATAL: _logging.FATAL,
+    CRITICAL: _logging.CRITICAL,
 }
 
 
@@ -53,7 +53,7 @@ def basic_config(*, level: int = 0):
 
     """Configure logging"""
 
-    level = max(min(level, FATAL), DEBUG)
+    level = max(min(level, CRITICAL), DEBUG)
 
     _logging.basicConfig(
         format='%(levelname)s: %(message)s' if level > DEBUG
@@ -68,49 +68,107 @@ class Logger:
 
     By passing the module's `__name__`, it gets a logging hierarchy "for free".
 
-    >>> from .logger import Logger
-    >>> _log = Logger(__name__)
-    >>> _log.notice("{culprit} twiddled too many knobs", culprit="foobar")
+    >>> from prodis.logger import Logger
+    >>> log = Logger(__name__)
+    >>> log.notice("{culprit} twiddled too many knobs", culprit="foobar")
     """
 
     def __init__(self, module_name: str) -> None:
 
-        self._log = _logging.getLogger(module_name)
+        self._logger = _logging.getLogger(module_name)
 
-    def debug(self, fmt: str, *args, **kwargs) -> None:
+    def debug(
+            self, msg: str, *args,
+            exc_info=None, stack_info: bool = False, stacklevel: int = 1,
+            **kwargs,
+    ) -> None:
 
-        if self._log.isEnabledFor(_LEVEL_MAPPING[DEBUG]):
-            self._log.debug('%s', fmt.format(*args, **kwargs))
+        self._log(_LEVEL_MAPPING[DEBUG], msg, *args, exc_info=exc_info,
+                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def info(self, fmt: str, *args, **kwargs) -> None:
+    def info(
+            self, msg: str, *args,
+            exc_info=None, stack_info: bool = False, stacklevel: int = 1,
+            **kwargs,
+    ) -> None:
 
-        if self._log.isEnabledFor(_LEVEL_MAPPING[INFO]):
-            self._log.info('%s', fmt.format(*args, **kwargs))
+        self._log(_LEVEL_MAPPING[INFO], msg, *args, exc_info=exc_info,
+                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def notice(self, fmt: str, *args, **kwargs) -> None:
+    def notice(
+            self, msg: str, *args,
+            exc_info=None, stack_info: bool = False, stacklevel: int = 1,
+            **kwargs,
+    ) -> None:
 
-        if self._log.isEnabledFor(_LEVEL_MAPPING[NOTICE]):
-            self._log.log(_LEVEL_MAPPING[NOTICE],
-                          '%s', fmt.format(*args, **kwargs))
+        self._log(_LEVEL_MAPPING[NOTICE], msg, *args, exc_info=exc_info,
+                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def warning(self, fmt: str, *args, **kwargs) -> None:
+    def warning(
+            self, msg: str, *args,
+            exc_info=None, stack_info: bool = False, stacklevel: int = 1,
+            **kwargs,
+    ) -> None:
 
-        if self._log.isEnabledFor(_LEVEL_MAPPING[WARNING]):
-            self._log.warning('%s', fmt.format(*args, **kwargs))
+        self._log(_LEVEL_MAPPING[WARNING], msg, *args, exc_info=exc_info,
+                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def error(self, fmt: str, *args, **kwargs) -> None:
+    def error(
+            self, msg: str, *args,
+            exc_info=None, stack_info: bool = False, stacklevel: int = 1,
+            **kwargs,
+    ) -> None:
 
-        if self._log.isEnabledFor(_LEVEL_MAPPING[ERROR]):
-            self._log.error('%s', fmt.format(*args, **kwargs))
+        self._log(_LEVEL_MAPPING[ERROR], msg, *args, exc_info=exc_info,
+                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
 
-    def fatal(self, fmt: str, *args, **kwargs) -> None:
+    def critical(
+            self, msg: str, *args,
+            exc_info=None, stack_info: bool = False, stacklevel: int = 1,
+            **kwargs,
+    ) -> None:
 
-        if self._log.isEnabledFor(_LEVEL_MAPPING[FATAL]):
-            self._log.fatal('%s', fmt.format(*args, **kwargs))
+        self._log(_LEVEL_MAPPING[CRITICAL], msg, *args, exc_info=exc_info,
+                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+
+    def log(
+            self, level: int, msg: str, *args,
+            exc_info=None, stack_info: bool = False, stacklevel: int = 1,
+            **kwargs,
+    ) -> None:
+
+        self._log(_LEVEL_MAPPING[level], msg, *args, exc_info=exc_info,
+                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+
+    def exception(
+            self, msg: str, *args,
+            stack_info: bool = True, stacklevel: int = 1,
+            **kwargs,
+    ) -> None:
+
+        self._log(_LEVEL_MAPPING[ERROR], msg, *args, exc_info=True,
+                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+
+    def _log(
+            self, mapped: int, msg: str, *args,
+            exc_info=None, stack_info: bool = False, stacklevel: int,
+            **kwargs,
+    ) -> None:
+
+        if self._logger.isEnabledFor(mapped):
+
+            if kwargs:
+                args = dict(enumerate(args), **kwargs),
+
+            self._logger.log(
+                mapped, msg, *args, extra=kwargs,
+                exc_info=exc_info, stack_info=stack_info,
+                stacklevel=max(stacklevel, 1) + 2,
+            )
 
     def is_chatty(self) -> bool:
 
-        return self._log.isEnabledFor(_LEVEL_MAPPING[NOTICE])
+        return self._logger.isEnabledFor(_LEVEL_MAPPING[NOTICE])
 
     def is_quiet(self) -> bool:
 
@@ -118,4 +176,4 @@ class Logger:
 
     def is_debug(self) -> bool:
 
-        return self._log.isEnabledFor(_LEVEL_MAPPING[DEBUG])
+        return self._logger.isEnabledFor(_LEVEL_MAPPING[DEBUG])
