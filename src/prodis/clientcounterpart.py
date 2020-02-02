@@ -39,8 +39,6 @@ class ClientListener(_ForeverTask):
                 except _asyncio.CancelledError as exc:
 
                     _log.debug("ClientHandler was cancelled")
-                    _dummy = 12345
-                    pass
 
                 if exc is not None:
 
