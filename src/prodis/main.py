@@ -4,6 +4,9 @@ import asyncio as _asyncio
 
 from .clientcounterpart import ClientListener as _ClientListener
 
+from .logger import Logger as _Logger
+_log = _Logger(__name__)
+
 
 async def main_coroutine(*tasks) -> None:
 
@@ -12,7 +15,16 @@ async def main_coroutine(*tasks) -> None:
                                         return_when=_asyncio.FIRST_EXCEPTION)
 
     for future in pending:
-        future.cancel()
+
+        try:
+
+            future.cancel()
+
+        except BaseException as exc:
+
+            _log.exception("cancelling future resulted in: {type}: {text}",
+                           type=exc.__class__.__name__, text=str(exc))
+            raise
 
     for future in done:
         try:
@@ -39,7 +51,6 @@ if __name__ == '__main__':
     from . import logger as _logger
     _logger.basic_config(level=_logger.DEBUG if __debug__ or _sys.flags.dev_mode
                          else _logger.NOTICE)
-    _log = _logger.Logger(__name__)
 
     try:
         main()
