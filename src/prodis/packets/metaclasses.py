@@ -40,15 +40,31 @@ class IDDispatcher(type):
 
 class IDVerifier(IDDispatcher):
 
-    def __call__(cls, **kwargs) -> _NewMinecraftPacket:
+    def __call__(
+            cls: _Type[_NewMinecraftPacket], data: _ByteString = None, **kwargs
+    ) -> _NewMinecraftPacket:
 
         packet = object.__new__(cls)
-        packet.__init__(**kwargs)
-        # if data is None:
-        #     packet.__init__(**kwargs)
-        # elif not kwargs:
-        #     super(cls, packet).__init__(data)
-        #     packet.parse_data()
-        # else:
-        #     packet.__init__(data=data, **kwargs)
+
+        if data is None:
+
+            packet.__init__(**kwargs)
+
+        else:
+
+            it = iter(data)
+            packet_id = _iterutils.consume_varint(it)
+
+            if packet_id != cls.ID:
+                raise ValueError(
+                    f"expected packet ID {cls.ID:#x}, got {packet_id:#x}"
+                )
+
+            if kwargs:
+                raise NotImplementedError("cannot have both data and arguments")
+
+            packet.__init__()
+            packet.consume_payload(it)
+            () = it
+
         return packet
