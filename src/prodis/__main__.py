@@ -59,6 +59,10 @@ def main(debug: bool) -> _Optional[int]:
 
         return 76
 
+    except KeyboardInterrupt:
+
+        return 130
+
     except Exception as exc:
 
         _log.exception("exception in main loop: {type}: {text}",
