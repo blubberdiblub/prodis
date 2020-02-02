@@ -30,27 +30,12 @@ class ClientListener(_ForeverTask):
         # noinspection PyUnreachableCode
         if __debug__:
 
-            def stop_listener(task: _asyncio.Future) -> None:
+            def stop_listener(task: _ClientHandler) -> None:
 
-                try:
-
-                    exc = task.exception()
-
-                except _asyncio.CancelledError as exc:
-
-                    _log.debug("ClientHandler was cancelled")
-
-                if exc is not None:
-
-                    _log.exception(
-                        "exception occurred in ClientHandler: {type}: {text}",
-                        type=exc.__class__.__name__, text=str(exc),
-                        exc_info=exc, stack_info=False,
-                    )
-
+                if task.exception() is not None:
                     self.server.close()
 
-            client_handler.get_task().add_done_callback(stop_listener)
+            client_handler.add_done_callback(stop_listener)
 
     async def _coroutine(self) -> None:
 

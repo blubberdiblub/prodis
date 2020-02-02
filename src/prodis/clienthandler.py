@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 from typing import (
     Any as _Any,
     Coroutine as _Coroutine,
@@ -9,7 +11,7 @@ from typing import (
 )
 
 import asyncio as _asyncio
-import sys as _sys
+import contextvars as _contextvars
 
 from .packetreader import PacketReader as _PacketReader
 from .packetwriter import PacketWriter as _PacketWriter
@@ -39,6 +41,9 @@ from .packets.play.clientbound import (
     JoinGame as _JoinGame,
 )
 
+from .logger import Logger as _Logger
+_log = _Logger(__name__)
+
 
 class ClientHandler:
 
@@ -56,6 +61,8 @@ class ClientHandler:
 
         self._reader = reader
         self._writer = writer
+
+        self._done_callbacks = []
         self._exception = None
         self._result = None
         self._task = loop.create_task(self._handle(), name=task_name)
@@ -69,17 +76,46 @@ class ClientHandler:
             except _asyncio.CancelledError as exc:
 
                 self._exception = exc
+                _log.debug("ClientHandler was cancelled")
 
             else:
 
                 if self._exception is None:
+
                     self._result = task.result()
+
+                else:
+
+                    _log.exception(
+                        "exception occurred in ClientHandler: {type}: {text}",
+                        type=self._exception.__class__.__name__,
+                        text=str(self._exception),
+                        exc_info=self._exception, stack_info=False,
+                    )
 
             finally:
 
                 self._task = None
 
+            for callback, context in self._done_callbacks:
+                context.run(callback, self)
+
         self._task.add_done_callback(extract_result_and_clear_task)
+
+    def add_done_callback(self, callback: _Callable[[ClientHandler], None], *,
+                          context: _contextvars.Context = None) -> None:
+
+        if self._task is None:
+
+            _asyncio.get_running_loop().call_soon(callback, context=context)
+            return
+
+        self._done_callbacks.append(
+            (
+                callback,
+                context if context is not None else _contextvars.copy_context(),
+            )
+        )
 
     def get_task(self) -> _Optional[_asyncio.Task]:
 
