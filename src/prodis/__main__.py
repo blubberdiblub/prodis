@@ -37,20 +37,20 @@ async def main_coroutine(*tasks) -> None:
             pass
 
 
-def main_runner() -> None:
+def main_runner(debug: bool) -> None:
 
     create_from = [
         _ClientListener,
     ]
 
     tasks = [factory() for factory in create_from]
-    _asyncio.run(main_coroutine(*tasks))
+    _asyncio.run(main_coroutine(*tasks), debug=debug)
 
 
-def main() -> _Optional[int]:
+def main(debug: bool) -> _Optional[int]:
 
     try:
-        main_runner()
+        main_runner(debug)
 
     except _asyncio.CancelledError as exc:
 
@@ -77,10 +77,16 @@ def main() -> _Optional[int]:
 
 
 if __name__ == '__main__':
+
+    import os as _os
     import sys as _sys
 
-    from . import logger as _logger
-    _logger.basic_config(level=_logger.DEBUG if __debug__ or _sys.flags.dev_mode
-                         else _logger.NOTICE)
+    _debug = (
+            _sys.flags.dev_mode or (not _sys.flags.ignore_environment and
+                                    bool(_os.environ.get('PYTHONASYNCIODEBUG')))
+    )
 
-    _sys.exit(main())
+    from . import logger as _logger
+    _logger.basic_config(level=_logger.DEBUG if _debug else _logger.NOTICE)
+
+    _sys.exit(main(_debug))
