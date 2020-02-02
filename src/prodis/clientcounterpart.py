@@ -43,13 +43,14 @@ class ClientListener(_ForeverTask):
                     pass
 
                 if exc is not None:
+
                     _log.exception(
                         "exception occurred in ClientHandler: {type}: {text}",
                         type=exc.__class__.__name__, text=str(exc),
                         exc_info=exc, stack_info=False,
                     )
-                    self.future.cancel()
-                    raise exc
+
+                    self.server.close()
 
             client_handler.get_task().add_done_callback(stop_listener)
 
