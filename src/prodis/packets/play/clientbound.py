@@ -127,6 +127,51 @@ class JoinGame(_VerifiedPacket):
         )
 
 
+class ChunkData(_VerifiedPacket):
+
+    ID = 0x22
+
+    def __init__(
+            self,
+            chunk_x: int = None,
+            chunk_z: int = None,
+            full_chunk: bool = True,
+            primary_bit_mask: int = 0,
+            motion_blocking=None,
+            world_surface=None,
+            # ...,
+    ) -> None:
+
+        super().__init__()
+
+        self.chunk_x = chunk_x
+        self.chunk_z = chunk_z
+        self.full_chunk = full_chunk
+        self.primary_bit_mask = primary_bit_mask
+        self.motion_blocking = motion_blocking
+        self.world_surface = world_surface
+
+    def _fmt_args(self) -> str:
+
+        return ', '.join([
+            f'chunk_x={self.chunk_x!r}',
+            f'chunk_z={self.chunk_z!r}',
+            f'full_chunk={self.full_chunk!r}',
+            f'primary_bit_mask={self.primary_bit_mask!r}',
+            f'motion_blocking={self.motion_blocking!r}',
+            f'world_surface={self.world_surface!r}',
+        ])
+
+    def consume_payload(self, it: _Union[_ByteString, _Iterator[int]]) -> None:
+
+        it = iter(it)
+        () = it
+
+    def render_payload(self) -> _ByteString:
+
+        return b''
+
 Packet.packet_types = {
     JoinGame.ID: JoinGame,
+    ChunkData.ID: ChunkData,
 }
