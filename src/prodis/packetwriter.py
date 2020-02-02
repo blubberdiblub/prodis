@@ -18,7 +18,7 @@ class PacketWriter:
 
     async def write(self, packet: _Packet, drain=True) -> None:
 
-        _log.debug("-> %(packet)s", packet=packet)
+        _log.debug("-> {packet}", packet=packet)
 
         for data in packet.produce_raw():
             self._stream_writer.write(data)

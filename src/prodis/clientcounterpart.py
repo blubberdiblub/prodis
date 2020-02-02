@@ -38,8 +38,9 @@ class ClientListener(_ForeverTask):
 
                 if exc is not None:
                     _log.exception(
-                        "exception occurred in ClientHandler: %(type) %(text)",
+                        "exception occurred in ClientHandler: {type}: {text}",
                         type=exc.__class__.__name__, text=str(exc),
+                        exc_info=exc, stack_info=False,
                     )
                     self.future.cancel()
                     raise exc
@@ -57,7 +58,18 @@ class ClientListener(_ForeverTask):
         if not server.sockets:
             raise ValueError("no sockets opened")
 
-        return await server.serve_forever()
+        try:
+            await self.server.serve_forever()
+
+        except _asyncio.CancelledError:
+
+            _log.debug("ClientListener was cancelled")
+
+        else:
+
+            _log.debug("ClientListener finished")
+
+        return
 
     def _get_future(self, loop) -> _asyncio.Task:
 

@@ -15,7 +15,12 @@ async def main_coroutine(*tasks) -> None:
         future.cancel()
 
     for future in done:
-        future.result()
+        try:
+            future.result()
+
+        except _asyncio.CancelledError:
+
+            pass
 
 
 def main() -> None:
@@ -34,5 +39,26 @@ if __name__ == '__main__':
     from . import logger as _logger
     _logger.basic_config(level=_logger.DEBUG if __debug__ or _sys.flags.dev_mode
                          else _logger.NOTICE)
+    _log = _logger.Logger(__name__)
 
-    _sys.exit(main())
+    try:
+        main()
+
+    except _asyncio.CancelledError as exc:
+
+        _log.exception("cancellation escaped main loop: {type}: {text}",
+                       type=exc.__class__.__name__, text=str(exc))
+        _sys.exit(1)
+
+    except Exception as exc:
+
+        _log.exception("exception in main loop: {type}: {text}",
+                       type=exc.__class__.__name__, text=str(exc))
+        _sys.exit(1)
+
+    except BaseException as exc:
+
+        _log.exception("{type}: {text}",
+                       type=exc.__class__.__name__, text=str(exc))
+
+        raise

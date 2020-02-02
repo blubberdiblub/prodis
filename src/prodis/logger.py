@@ -49,6 +49,29 @@ _LEVEL_MAPPING = {
 }
 
 
+class _LogRecord(_logging.LogRecord):
+
+    def __init__(self, name: str, level: int, pathname: str, lineno: int,
+                 msg: str, kwargs,
+                 exc_info, func=None, sinfo=None, style='%') -> None:
+
+        if style not in ['%', '{']:
+            raise ValueError(f"unknown style {style!r}")
+
+        super().__init__(name, level, pathname, lineno, str(msg), (), exc_info,
+                         func=func, sinfo=sinfo)
+
+        self.args = kwargs
+        self.__style = style
+
+    def getMessage(self) -> str:
+
+        if self.__style == '%':
+            return self.msg % self.args
+
+        return self.msg.format(**self.args)
+
+
 def basic_config(*, level: int = 0):
 
     """Configure logging"""
@@ -80,85 +103,95 @@ class Logger:
     def debug(
             self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
-            **kwargs,
+            style='{', **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[DEBUG], msg, exc_info=exc_info,
-                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+        self._log(_LEVEL_MAPPING[DEBUG], msg, exc_info, stack_info, stacklevel,
+                  style, **kwargs)
 
     def info(
             self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
-            **kwargs,
+            style='{', **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[INFO], msg, exc_info=exc_info,
-                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+        self._log(_LEVEL_MAPPING[INFO], msg, exc_info, stack_info, stacklevel,
+                  style, **kwargs)
 
     def notice(
             self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
-            **kwargs,
+            style='{', **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[NOTICE], msg, exc_info=exc_info,
-                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+        self._log(_LEVEL_MAPPING[NOTICE], msg, exc_info, stack_info, stacklevel,
+                  style, **kwargs)
 
     def warning(
             self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
-            **kwargs,
+            style='{', **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[WARNING], msg, exc_info=exc_info,
-                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+        self._log(_LEVEL_MAPPING[WARNING], msg, exc_info, stack_info,
+                  stacklevel, style, **kwargs)
 
     def error(
             self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
-            **kwargs,
+            style='{', **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[ERROR], msg, exc_info=exc_info,
-                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+        self._log(_LEVEL_MAPPING[ERROR], msg, exc_info, stack_info, stacklevel,
+                  style, **kwargs)
 
     def critical(
             self, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
-            **kwargs,
+            style='{', **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[CRITICAL], msg, exc_info=exc_info,
-                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+        self._log(_LEVEL_MAPPING[CRITICAL], msg, exc_info, stack_info,
+                  stacklevel, style, **kwargs)
 
     def log(
             self, level: int, msg: str,
             exc_info=None, stack_info: bool = False, stacklevel: int = 1,
-            **kwargs,
+            style='{', **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[level], msg, exc_info=exc_info,
-                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+        self._log(_LEVEL_MAPPING[level], msg, exc_info, stack_info, stacklevel,
+                  style, **kwargs)
 
     def exception(
             self, msg: str,
-            stack_info: bool = True, stacklevel: int = 1,
-            **kwargs,
+            exc_info=True, stack_info: bool = True, stacklevel: int = 1,
+            style='{', **kwargs,
     ) -> None:
 
-        self._log(_LEVEL_MAPPING[ERROR], msg, exc_info=True,
-                  stack_info=stack_info, stacklevel=stacklevel, **kwargs)
+        self._log(_LEVEL_MAPPING[ERROR], msg, exc_info, stack_info, stacklevel,
+                  style, **kwargs)
 
     def _log(self, mapped: int, msg: str, exc_info, stack_info: bool,
-             stacklevel: int, **kwargs) -> None:
+             stacklevel: int, style: str, **kwargs) -> None:
 
         if self._logger.isEnabledFor(mapped):
 
-            self._logger.log(
-                mapped, msg, kwargs, extra=kwargs,
-                exc_info=exc_info, stack_info=stack_info,
-                stacklevel=max(stacklevel, 1) + 2,
-            )
+            # noinspection PyArgumentList
+            fn, lno, func, sinfo = self._logger.findCaller(stack_info,
+                                                           max(stacklevel, 1))
+
+            if exc_info:
+                if isinstance(exc_info, BaseException):
+                    exc_info = type(exc_info), exc_info, exc_info.__traceback__
+                elif not isinstance(exc_info, tuple):
+                    import sys
+                    exc_info = sys.exc_info()
+
+            record = _LogRecord(self._logger.name, mapped, fn, lno, msg, kwargs,
+                                exc_info, func=func, sinfo=sinfo, style=style)
+
+            self._logger.handle(record)
 
     def is_chatty(self) -> bool:
 

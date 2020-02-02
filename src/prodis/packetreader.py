@@ -41,7 +41,7 @@ class PacketReader:
             raise
 
         packet = self._packet_type(data)
-        _log.debug("<- %(packet)s", packet=packet)
+        _log.debug("<- {packet}", packet=packet)
         return packet
 
     async def _packet_length(self) -> int:
