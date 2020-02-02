@@ -45,7 +45,7 @@ from .logger import Logger as _Logger
 _log = _Logger(__name__)
 
 
-class ClientHandler:
+class ClientHandler(_asyncio.Task):
 
     def __init__(
             self,
@@ -56,35 +56,24 @@ class ClientHandler:
             task_name: str = None,
     ) -> None:
 
-        if loop is None:
-            loop = _asyncio.get_running_loop()
-
         self._reader = reader
         self._writer = writer
 
-        self._done_callbacks = []
-        self._exception = None
-        self._result = None
-        self._task = loop.create_task(self._handle(), name=task_name)
+        super().__init__(self._handle(), loop=loop, name=task_name)
 
         def extract_result_and_clear_task(task) -> None:
 
             try:
 
-                self._exception = task.exception()
+                exc = task.exception()
 
-            except _asyncio.CancelledError as exc:
+            except _asyncio.CancelledError:
 
-                self._exception = exc
                 _log.debug("ClientHandler was cancelled")
 
             else:
 
-                if self._exception is None:
-
-                    self._result = task.result()
-
-                else:
+                if exc is not None:
 
                     _log.exception(
                         "exception occurred in ClientHandler: {type}: {text}",
@@ -93,61 +82,7 @@ class ClientHandler:
                         exc_info=self._exception, stack_info=False,
                     )
 
-            finally:
-
-                self._task = None
-
-            for callback, context in self._done_callbacks:
-                context.run(callback, self)
-
-        self._task.add_done_callback(extract_result_and_clear_task)
-
-    def add_done_callback(self, callback: _Callable[[ClientHandler], None], *,
-                          context: _contextvars.Context = None) -> None:
-
-        if self._task is None:
-
-            _asyncio.get_running_loop().call_soon(callback, context=context)
-            return
-
-        self._done_callbacks.append(
-            (
-                callback,
-                context if context is not None else _contextvars.copy_context(),
-            )
-        )
-
-    def get_task(self) -> _Optional[_asyncio.Task]:
-
-        return self._task
-
-    def done(self) -> bool:
-
-        return self._task is None
-
-    def exception(self) -> _Optional[BaseException]:
-
-        if self._task is not None:
-            raise _asyncio.InvalidStateError("client handler still running")
-
-        if self._exception is None:
-            return None
-
-        if isinstance(self._exception, _asyncio.CancelledError):
-            raise self._exception
-
-        return self._exception
-
-    def result(self) -> _Any:
-
-        if self._task is not None:
-            raise _asyncio.InvalidStateError("client handler still running")
-
-        exc = self.exception()
-        if exc is not None:
-            raise exc
-
-        return self._result
+        self.add_done_callback(extract_result_and_clear_task)
 
     async def _handle(self) -> None:
 
