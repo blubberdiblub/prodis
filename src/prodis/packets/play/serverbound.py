@@ -99,6 +99,46 @@ class ClientSettings(_VerifiedPacket):
         )
 
 
+class PluginMessage(_VerifiedPacket):
+
+    ID = 0xb
+
+    def __init__(
+            self,
+            namespace: str = 'minecraft',
+            channel: str = None,
+            channel_data: _ByteString = None,
+    ) -> None:
+
+        super().__init__()
+
+        self.namespace = namespace
+        self.channel = channel
+        self.channel_data = channel_data
+
+    def _fmt_args(self) -> str:
+
+        return ', '.join([
+            f'namespace={self.namespace!r}',
+            f'channel={self.channel!r}',
+            f'channel_data={self.channel_data!r}',
+        ])
+
+    def consume_payload(self, it: _Union[_ByteString, _Iterator[int]]) -> None:
+
+        it = iter(it)
+        self.namespace, self.channel = _iterutils.consume_identifier(it)
+        self.channel_data = bytes(it)
+
+    def render_payload(self) -> _ByteString:
+
+        return b'%b%b' % (
+            _byteutils.render_identifier(self.namespace, self.channel),
+            self.channel_data,
+        )
+
+
 Packet.packet_types = {
     ClientSettings.ID: ClientSettings,
+    PluginMessage.ID: PluginMessage,
 }
