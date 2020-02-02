@@ -22,3 +22,15 @@ def render_string(s: str) -> bytes:
 
     b = s.encode()
     return render_varint(len(b)) + b
+
+
+def render_identifier(namespace: str, name: str) -> bytes:
+
+    if not namespace:
+        namespace = 'minecraft'
+
+    b = b'%b:%b' % (
+        namespace.encode('ascii'),
+        name.encode('ascii'),
+    )
+    return render_varint(len(b)) + b

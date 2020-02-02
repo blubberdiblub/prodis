@@ -11,14 +11,6 @@ from functools import partial as _partial
 from itertools import islice as _islice
 
 
-def make_iter(it: _Iterable[int]) -> _Tuple[_Iterator[int],
-                                            _Callable[[int], _Iterator[int]]]:
-
-    it = iter(it)
-
-    return it, _partial(_islice, it)
-
-
 def consume_varint(it: _Iterator[int]) -> int:
 
     octet = next(it)
@@ -53,6 +45,17 @@ def consume_string(it: _Iterator[int]) -> str:
     return bytes(_islice(it, n)).decode()
 
 
+def consume_identifier(it: _Iterator[int]) -> _Tuple[str, str]:
+
+    n = consume_varint(it)
+    namespace, _, name = bytes(_islice(it, n)).rpartition(b':')
+
+    if not namespace:
+        return 'minecraft', name.decode('ascii')
+
+    return namespace.decode('ascii'), name.decode('ascii')
+
+
 def produce_varint(v: int) -> _Iterator[int]:
 
     if 0 <= v <= 0x7f:
@@ -72,5 +75,18 @@ def produce_varint(v: int) -> _Iterator[int]:
 def produce_string(s: str) -> _Iterator[int]:
 
     b = s.encode()
+    yield from produce_varint(len(b))
+    yield from b
+
+
+def produce_identifier(namespace: str, name: str) -> _Iterator[int]:
+
+    if not namespace:
+        namespace = 'minecraft'
+
+    b = b'%b:%b' % (
+        namespace.encode('ascii'),
+        name.encode('ascii'),
+    )
     yield from produce_varint(len(b))
     yield from b
