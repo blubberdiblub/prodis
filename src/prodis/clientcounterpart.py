@@ -11,6 +11,12 @@ _log = _Logger(__name__)
 
 class ClientListener(_ForeverTask):
 
+    def __init__(self) -> None:
+
+        super().__init__()
+
+        self.server = None
+
     def _client_connected(
             self,
             reader: _asyncio.StreamReader,
@@ -49,13 +55,13 @@ class ClientListener(_ForeverTask):
 
     async def _coroutine(self) -> None:
 
-        server = await _asyncio.start_server(
+        self.server = await _asyncio.start_server(
             self._client_connected,
             host='localhost',
             port=25565,
         )
 
-        if not server.sockets:
+        if not self.server.sockets:
             raise ValueError("no sockets opened")
 
         try:
