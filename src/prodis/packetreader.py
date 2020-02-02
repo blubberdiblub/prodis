@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from typing import (
+    Type as _Type,
+    Union as _Union,
+)
+
 import asyncio as _asyncio
 
 from .packets import Packet as _Packet
@@ -15,7 +20,7 @@ class PacketReader:
     def __init__(
             self,
             stream_reader: _asyncio.StreamReader,
-            packet_type,
+            packet_type: _Type[_Packet] = None,
     ) -> None:
 
         self._stream_reader = stream_reader
@@ -25,7 +30,7 @@ class PacketReader:
 
         return self
 
-    async def __anext__(self) -> _Packet:
+    async def __anext__(self) -> _Union[_Packet, bytes]:
 
         try:
             packet_length = await self._packet_length()
@@ -40,8 +45,27 @@ class PacketReader:
 
             raise
 
-        packet = self._packet_type(data)
-        _log.debug("<- {packet}", packet=packet)
+        if self._packet_type is None:
+
+            # noinspection PyUnreachableCode
+            if __debug__:
+                _log.debug("<- [{hex}]", hex=data.hex(sep=' '))
+
+            return data
+
+        try:
+
+            packet = self._packet_type(data)
+
+        except Exception:
+
+            _log.debug("<- [{hex}]", hex=data.hex(sep=' '))
+            raise
+
+        # noinspection PyUnreachableCode
+        if __debug__:
+            _log.debug("<- {packet}", packet=packet)
+
         return packet
 
     async def _packet_length(self) -> int:
