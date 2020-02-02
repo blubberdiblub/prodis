@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from typing import Optional as _Optional
+
 import asyncio as _asyncio
 
 from .clientcounterpart import ClientListener as _ClientListener
@@ -35,7 +37,7 @@ async def main_coroutine(*tasks) -> None:
             pass
 
 
-def main() -> None:
+def main_runner() -> None:
 
     create_from = [
         _ClientListener,
@@ -45,27 +47,24 @@ def main() -> None:
     _asyncio.run(main_coroutine(*tasks))
 
 
-if __name__ == '__main__':
-    import sys as _sys
-
-    from . import logger as _logger
-    _logger.basic_config(level=_logger.DEBUG if __debug__ or _sys.flags.dev_mode
-                         else _logger.NOTICE)
+def main() -> _Optional[int]:
 
     try:
-        main()
+        main_runner()
 
     except _asyncio.CancelledError as exc:
 
         _log.exception("cancellation escaped main loop: {type}: {text}",
                        type=exc.__class__.__name__, text=str(exc))
-        _sys.exit(1)
+
+        return 76
 
     except Exception as exc:
 
         _log.exception("exception in main loop: {type}: {text}",
                        type=exc.__class__.__name__, text=str(exc))
-        _sys.exit(1)
+
+        return 70
 
     except BaseException as exc:
 
@@ -73,3 +72,15 @@ if __name__ == '__main__':
                        type=exc.__class__.__name__, text=str(exc))
 
         raise
+
+    return 0
+
+
+if __name__ == '__main__':
+    import sys as _sys
+
+    from . import logger as _logger
+    _logger.basic_config(level=_logger.DEBUG if __debug__ or _sys.flags.dev_mode
+                         else _logger.NOTICE)
+
+    _sys.exit(main())
