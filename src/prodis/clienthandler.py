@@ -260,4 +260,9 @@ class ClientHandler:
         else:
             raise EOFError("client disconnected")
 
+        async for packet in packet_reader:
+            pass
+        else:
+            raise EOFError("client disconnected")
+
         return None
