@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from typing import ByteString as _ByteString
+from typing import (
+    ByteString as _ByteString,
+    Type as _Type,
+)
 
 from .packet import NewMinecraftPacket as _NewMinecraftPacket
 
@@ -11,7 +14,9 @@ from . import iterutils as _iterutils
 
 class IDDispatcher(type):
 
-    def __call__(cls, data: _ByteString) -> _NewMinecraftPacket:
+    def __call__(
+            cls: _Type[_NewMinecraftPacket], data: _ByteString
+    ) -> _NewMinecraftPacket:
 
         if not isinstance(data, _ByteString):
             raise TypeError("data must be bytes-like")
@@ -22,12 +27,14 @@ class IDDispatcher(type):
         try:
             dispatched = cls.packet_types[packet_id]
         except KeyError:
-            raise ValueError("unknown packet ID") from None
+            raise ValueError(f"unknown packet ID {packet_id:#x}") from None
 
         packet = object.__new__(dispatched)
         # cls.__init__(packet, data)
         packet.__init__()
         packet.consume_payload(it)
+        () = it
+
         return packet
 
 
