@@ -4,7 +4,7 @@ from typing import Optional as _Optional
 
 import asyncio as _asyncio
 
-from .clientcounterpart import ClientListener as _ClientListener
+from .clientlistener import ClientListener as _ClientListener
 
 from .logger import Logger as _Logger
 _log = _Logger(__name__)
