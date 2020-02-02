@@ -37,6 +37,9 @@ from .packets.login.serverbound import (
 from .packets.login.clientbound import (
     LoginSuccess as _LoginSuccess,
 )
+from .packets.play.serverbound import (
+    ClientSettings as _ClientSettings,
+)
 from .packets.play.clientbound import (
     JoinGame as _JoinGame,
 )
@@ -268,6 +271,7 @@ class ClientHandler:
         await packet_writer.write(packet)
 
         async for packet in packet_reader:
+            assert isinstance(packet, _ClientSettings)
 
             break
         else:
