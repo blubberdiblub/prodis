@@ -22,27 +22,6 @@ from .packets import (
     login as _login,
     play as _play,
 )
-from .packets.handshaking.serverbound import Handshake as _Handshake
-from .packets.status.serverbound import (
-    Request as _Request,
-    Ping as _Ping,
-)
-from .packets.status.clientbound import (
-    Response as _Response,
-    Pong as _Pong,
-)
-from .packets.login.serverbound import (
-    LoginStart as _LoginStart,
-)
-from .packets.login.clientbound import (
-    LoginSuccess as _LoginSuccess,
-)
-from .packets.play.serverbound import (
-    ClientSettings as _ClientSettings,
-)
-from .packets.play.clientbound import (
-    JoinGame as _JoinGame,
-)
 
 from .logger import Logger as _Logger
 _log = _Logger(__name__)
@@ -188,7 +167,7 @@ class ClientHandler:
         packet_reader = _PacketReader(self._reader, _handshaking.ServerBound)
         async for packet in packet_reader:
 
-            assert isinstance(packet, _Handshake)
+            assert isinstance(packet, _handshaking.serverbound.Handshake)
 
             assert packet.protocol == 578
             protocol = packet.protocol
@@ -217,24 +196,24 @@ class ClientHandler:
         packet_writer = _PacketWriter(self._writer)
 
         async for packet in packet_reader:
-            assert isinstance(packet, _Request)
+            assert isinstance(packet, _status.serverbound.Request)
 
             break
         else:
             raise EOFError("client disconnected")
 
-        packet = _Response(description="Foobar")
+        packet = _status.clientbound.Response(description="Foobar")
         await packet_writer.write(packet)
 
         async for packet in packet_reader:
-            assert isinstance(packet, _Ping)
+            assert isinstance(packet, _status.serverbound.Ping)
 
             value = packet.value
             break
         else:
             raise EOFError("client disconnected")
 
-        packet = _Pong(value=value)
+        packet = _status.clientbound.Pong(value=value)
         await packet_writer.write(packet)
         await self._expect_eof()
 
@@ -246,7 +225,7 @@ class ClientHandler:
         packet_writer = _PacketWriter(self._writer)
 
         async for packet in packet_reader:
-            assert isinstance(packet, _LoginStart)
+            assert isinstance(packet, _login.serverbound.LoginStart)
 
             username = packet.name
             break
@@ -256,7 +235,7 @@ class ClientHandler:
         assert username.isalnum()
         uuid = '4465fcc3-d445-4ee2-bb00-7b39ce2d3cc7'
 
-        packet = _LoginSuccess(uuid=uuid, username=username)
+        packet = _login.clientbound.LoginSuccess(uuid=uuid, username=username)
         await packet_writer.write(packet)
 
         return self._play()
@@ -266,12 +245,16 @@ class ClientHandler:
         packet_reader = _PacketReader(self._reader, _play.ServerBound)
         packet_writer = _PacketWriter(self._writer)
 
-        packet = _JoinGame(entity_id=1, game_mode=0, dimension=0,
-                           hashed_seed=0x0123456789abcdef)
+        packet = _play.clientbound.JoinGame(
+            entity_id=1,
+            game_mode=0,
+            dimension=0,
+            hashed_seed=0x0123456789abcdef,
+        )
         await packet_writer.write(packet)
 
         async for packet in packet_reader:
-            assert isinstance(packet, _ClientSettings)
+            assert isinstance(packet, _play.serverbound.ClientSettings)
 
             break
         else:
