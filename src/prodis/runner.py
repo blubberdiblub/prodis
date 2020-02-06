@@ -3,6 +3,7 @@
 import asyncio as _asyncio
 
 from .clientlistener import ClientListener as _ClientListener
+from .serverconnector import ServerConnector as _ServerConnector
 
 from .logger import Logger as _Logger
 _log = _Logger(__name__)
@@ -39,6 +40,7 @@ def run(debug_asyncio: bool) -> None:
 
     create_from = [
         _ClientListener,
+        _ServerConnector,
     ]
 
     tasks = [factory() for factory in create_from]
