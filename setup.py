@@ -60,7 +60,7 @@ if __name__ == '__main__':
         },
         entry_points={
             'console_scripts': [
-                'prodis = prodis.__main__:main',
+                'prodis = prodis.cli:main',
             ],
         },
         author='Niels Boehm',
