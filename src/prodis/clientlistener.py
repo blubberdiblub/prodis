@@ -13,9 +13,12 @@ _log = _Logger(__name__)
 
 class ClientListener(_ForeverTask):
 
-    def __init__(self) -> None:
+    def __init__(self, host: str = 'localhost', port: int = 25565) -> None:
 
         super().__init__()
+
+        self.host = host
+        self.port = port
 
         self.server = None
 
@@ -42,8 +45,9 @@ class ClientListener(_ForeverTask):
 
         self.server = await _asyncio.start_server(
             self._client_connected,
-            host='localhost',
-            port=25565,
+            host=self.host,
+            port=self.port,
+            start_serving=False,
         )
 
         if not self.server.sockets:
@@ -62,6 +66,6 @@ class ClientListener(_ForeverTask):
 
         return
 
-    def _get_future(self, loop) -> _asyncio.Task:
+    def _get_future(self, loop: _asyncio.AbstractEventLoop) -> _asyncio.Task:
 
         return loop.create_task(self._coroutine())
