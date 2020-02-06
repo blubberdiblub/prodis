@@ -127,6 +127,7 @@ class JoinGame(_VerifiedPacket):
         )
 
 
+# TODO: complete
 class ChunkData(_VerifiedPacket):
 
     ID = 0x22
@@ -170,6 +171,7 @@ class ChunkData(_VerifiedPacket):
     def render_payload(self) -> _ByteString:
 
         return b''
+
 
 Packet.packet_types = {
     JoinGame.ID: JoinGame,
