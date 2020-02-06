@@ -2,6 +2,8 @@
 
 import asyncio as _asyncio
 
+from .debug import DEBUG_ASYNCIO as _DEBUG_ASYNCIO
+
 from .forevertask import ForeverTask as _ForeverTask
 from .clienthandler import ClientHandler as _ClientHandler
 
@@ -27,8 +29,7 @@ class ClientListener(_ForeverTask):
 
         client_handler = _ClientHandler(reader, writer)
 
-        # noinspection PyUnreachableCode
-        if __debug__:
+        if _DEBUG_ASYNCIO:
 
             def stop_listener(task: _ClientHandler) -> None:
 

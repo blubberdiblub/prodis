@@ -18,7 +18,9 @@ class PacketWriter:
 
     async def write(self, packet: _Packet, drain=True) -> None:
 
-        _log.debug("-> {packet}", packet=packet)
+        # noinspection PyUnreachableCode
+        if __debug__:
+            _log.debug("-> {packet}", packet=packet)
 
         for data in packet.produce_raw():
             self._stream_writer.write(data)
